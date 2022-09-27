@@ -219,6 +219,7 @@ impl DrawShape for Bullet {
 
 trait Movable {
     fn move_by(&mut self, offset: Vec2, tpf: f32);
+    fn set_position(&mut self, position: Vec2);
 }
 
 impl Movable for Entity {
@@ -228,6 +229,12 @@ impl Movable for Entity {
 
         self.bouding_box.x = self.position.x;
         self.bouding_box.y = self.position.y;
+    }
+
+    fn set_position(&mut self, position: Vec2) {
+        self.position = position;
+        self.bouding_box.x = position.x;
+        self.bouding_box.y = position.y;
     }
 }
 
@@ -342,21 +349,10 @@ async fn main() {
         // Input related stuff
         {
             let movable: &mut dyn Movable = &mut player.entity;
-            let mut offset = Vec2::new(0.0, 0.0);
-            if is_key_down(KeyCode::Up) {
-                offset.y = -1.0;
-            }
-            if is_key_down(KeyCode::Down) {
-                offset.y = 1.0;
-            }
-            if is_key_down(KeyCode::Right) {
-                offset.x = 1.0;
-            }
-            if is_key_down(KeyCode::Left) {
-                offset.x = -1.0;
-            }
-            movable.move_by(offset, tpf);
+            let (mouse_x, mouse_y) = mouse_position();
+            movable.set_position(Vec2::new(mouse_x, mouse_y));
         }
+
 
         // Handle collisition player-bullets, if a bullet gets hit bounce it back
         {
