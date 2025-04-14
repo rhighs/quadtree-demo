@@ -6,10 +6,11 @@ use std::marker::Copy;
 const WINDOW_WIDTH: i32 = 1000;
 const WINDOW_HEIGHT: i32 = 600;
 
-const QUADTREE_REGION_LIMIT: usize = 10;
+const QUADTREE_REGION_LIMIT: usize = 50;
 const PARTICLE_SPAWN_INTERVAL: f32 = 0.05;
-const PARTICLE_SPAWN_RATE: f32 = 2000.0;
 const PARTICLE_RADIUS: f32 = 1.0;
+
+const PARTICLE_SPAWN_RATE: f32 = 2000.0;
 
 struct QuadNode {
     region: Rect,
@@ -59,14 +60,6 @@ impl QuadNode {
             }
         }
         ids
-    }
-
-    fn draw(&self) {
-        let r = self.region;
-        draw_rectangle_lines(r.x, r.y, r.w, r.h, 1.0, GREEN);
-        for region in &self.regions {
-            region.draw();
-        }
     }
 
     fn add(&mut self, id: u32, position: &Vec2) {
@@ -181,6 +174,16 @@ impl DrawShape for Particle {
     }
 }
 
+impl DrawShape for QuadNode {
+    fn draw(&self) {
+        let r = self.region;
+        draw_rectangle_lines(r.x, r.y, r.w, r.h, 1.0, GREEN);
+        for region in &self.regions {
+            region.draw();
+        }
+    }
+}
+
 trait Movable {
     fn set_position(&mut self, position: Vec2);
 }
@@ -208,6 +211,7 @@ async fn main() {
     let mut player = Player::new(100.0, screen_middle);
 
     let mut debug_lines = false;
+    let mut particle_spawn_rate: f32 = PARTICLE_SPAWN_RATE;
     let mut time_since_last_spawn = 0.0;
 
     let mut player_velocity = Vec2::ZERO;
@@ -236,6 +240,14 @@ async fn main() {
             if is_key_pressed(KeyCode::Space) {
                 debug_lines = !debug_lines;
             }
+            let rate_change_speed = 500.0;
+            if is_key_down(KeyCode::X) {
+                particle_spawn_rate += rate_change_speed * dt;
+            }
+            if is_key_down(KeyCode::Z) {
+                particle_spawn_rate = (particle_spawn_rate -
+                                       rate_change_speed * dt).max(0.0);
+            }
 
             let (_, mouse_wheel_y) = mouse_wheel();
             if mouse_wheel_y != 0.0 {
@@ -247,7 +259,7 @@ async fn main() {
 
         if time_since_last_spawn >= PARTICLE_SPAWN_INTERVAL {
             particles.append(
-                &mut (0..((PARTICLE_SPAWN_RATE * PARTICLE_SPAWN_INTERVAL) as i32))
+                &mut (0..((particle_spawn_rate * PARTICLE_SPAWN_INTERVAL) as i32))
                     .map(|_| {
                         Particle::new(
                             Vec2::new(rand::gen_range(0.0, WINDOW_WIDTH as f32), 0.0),
@@ -333,9 +345,9 @@ async fn main() {
                 qtree.draw();
             }
             draw_text(
-                format!("{} FPS", get_fps()).as_str(),
-                WINDOW_WIDTH as f32 - 120.0,
-                30.0,
+                format!("{} FPS, {} PARTICLES", get_fps(), particles.len()).as_str(),
+                10.0,
+                WINDOW_HEIGHT as f32 - 10.0,
                 30.0,
                 WHITE,
             );
@@ -350,6 +362,13 @@ async fn main() {
                 format!("- [MOUSE_WHEEL] player radius: {}", player.entity.bound.r).as_str(),
                 10.0,
                 60.0,
+                30.0,
+                WHITE,
+            );
+            draw_text(
+                format!("- [Z/X] particle spawn rate: {}", particle_spawn_rate).as_str(),
+                10.0,
+                90.0,
                 30.0,
                 WHITE,
             );
